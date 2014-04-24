@@ -1,10 +1,12 @@
 patches-own [ dist diffusable? is_path? is_sink? is_source?]
-globals [ sink_dist source_dist ]
+globals [ sink_dist source_dist sink_color source_color]
 
 to setup
   clear-all
   set sink_dist 0.0
   set source_dist 1.0
+  set sink_color 10
+  set source_color 19
   reset-ticks
   setup-patches
 end
@@ -23,24 +25,24 @@ end
 
 to setup-road
   if pycor = 0 [ 
-    set pcolor white 
+    set pcolor sink_color 
     set diffusable? True
     set is_path? True
   ]
   if (pycor = 0) and (pxcor = max-pxcor) [ ; End of road is a sink.
-    set pcolor white
+    set pcolor sink_color
     set is_sink? True
     set diffusable? False
     set dist sink_dist
   ]
   if (pycor = 0) and (pxcor = min-pxcor) [ ; End of a road is a sink.
-    set pcolor white
+    set pcolor sink_color
     set is_sink? True
     set diffusable? False
     set dist sink_dist
   ]
   if (pycor = 0) and (pxcor = 0) [ ; Center of road is a source. 
-    set pcolor red
+    set pcolor source_color
     set is_source? True
     set diffusable? False
     set dist source_dist
@@ -60,10 +62,47 @@ to diffuse-sink-dist
 end
 
 to patches-diffuse
-  let distances []
-  if not is_sink? [ ; if the patch isn't a sink then relax it. 
-    
+  diffuse-dist
+  diffuse-pcolor
+end
+
+to diffuse-dist
+  let ngbrs neighbors4
+  let wghts []
+  if diffusable? [ 
+    ask ngbrs [
+      if is_path? = True [
+        set wghts fput dist wghts ; fput appends to a list
+      ] 
+    ]
+    set dist mean wghts
   ]
+end
+
+to diffuse-pcolor
+  let ngbrs neighbors4
+  let wghts []
+  if diffusable? [ 
+    ask ngbrs [
+      if is_path? = True [
+        set wghts fput pcolor wghts ; fput appends to a list
+      ] 
+    ]
+    set pcolor mean wghts
+  ]
+end
+
+to add-turtle-sink
+  create-turtles 1
+end
+
+to update
+  ask turtles [move-turtles]  
+end
+
+to move-turtles
+  downhill dist
+  if (pxcor = min-pxcor) or (pxcor = max-pxcor) [ die ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -117,7 +156,7 @@ BUTTON
 121
 Diffuse
 diffuse-sink-dist
-NIL
+T
 1
 T
 OBSERVER
@@ -128,10 +167,10 @@ NIL
 1
 
 MONITOR
-14
-141
-85
-186
+19
+187
+90
+232
 NIL
 sink_dist
 17
@@ -139,15 +178,49 @@ sink_dist
 11
 
 MONITOR
-111
-140
-200
-185
+116
+186
+205
+231
 NIL
 source_dist
 17
 1
 11
+
+BUTTON
+13
+138
+110
+171
+Add Turtle
+add-turtle-sink
+NIL
+1
+T
+OBSERVER
+NIL
+A
+NIL
+NIL
+1
+
+BUTTON
+129
+139
+204
+172
+Update
+update
+NIL
+1
+T
+OBSERVER
+NIL
+U
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?

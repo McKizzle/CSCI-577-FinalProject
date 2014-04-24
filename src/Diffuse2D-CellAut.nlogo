@@ -1,10 +1,12 @@
 patches-own [ dist diffusable? is_path? is_sink? is_source?]
-globals [ sink_dist source_dist ]
+globals [ sink_dist source_dist sink_color source_color]
 
 to setup
   clear-all
   set sink_dist 0.0
   set source_dist 1.0
+  set sink_color 10
+  set source_color 19
   reset-ticks
   setup-patches
 end
@@ -25,7 +27,7 @@ end
 to reset-ss 
   ; Top and bottom edges are sinks
   if (pycor = min-pycor) or (pycor = max-pycor) [ 
-    set pcolor 10
+    set pcolor sink_color
     set is_sink? True
     set diffusable? False
     set dist sink_dist
@@ -33,7 +35,7 @@ to reset-ss
   
   ; Left and right edges are sinks
   if (pxcor = min-pxcor) and (pxcor = max-pxcor) [
-    set pcolor 10
+    set pcolor sink_color
     set is_sink? True
     set diffusable? False
     set dist sink_dist
@@ -41,7 +43,7 @@ to reset-ss
   
   ; Center is source
   if (pycor = 0) and (pxcor = 0) [ 
-    set pcolor 19
+    set pcolor source_color
     set is_source? True
     set diffusable? False
     set dist source_dist

@@ -8,7 +8,7 @@ to setup
   set source_elevation 200
   set boundary_elevation 1000
   setup-colors
-  ask patches [ paint-paths set-distances]
+  ;ask patches [ paint-paths set-distances] ; let the user manually repaint teh path eleveations. 
   ask turtles [ die ] ; Kill all turtles if any
 end
 
@@ -106,6 +106,27 @@ to add-source
   display
 end
 
+to add-boundary
+  while [mouse-down?] [
+    ask patch mouse-xcor mouse-ycor [
+      ifelse not boundary? [
+        set boundary?  True
+        set source? False
+        set sink? False
+        set sink_distance boundary_elevation
+        set pcolor boundary_pcolor
+      ] [
+        set boundary? False
+        set source? False
+        set sink? False
+        set sink_distance sink_elevation
+        set pcolor path_pcolor
+      ]
+    ]
+  ]
+  display
+end
+
 to add-turtle
   while [mouse-down?] [
     create-turtles 1
@@ -158,11 +179,16 @@ end
 ;; Update and turtle motions
 to update
   ask turtles [
+    let xcor_0 xcor
+    let ycor_0 ycor
     downhill sink_distance
+    if (count turtles-at 0 0) >= 2 [
+      set xcor xcor_0
+      set ycor ycor_0
+    ]
     if (sink? = True) [die]
   ]
 end
-
 
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -244,10 +270,10 @@ NIL
 1
 
 BUTTON
-126
-596
-240
-629
+370
+559
+484
+592
 Paint Paths
 paint-paths
 NIL
@@ -283,7 +309,7 @@ INPUTBOX
 799
 169
 default_export_path_name
-../patches/CSD_Default_World.csv
+../patches/CSD_Custom_World.csv
 1
 0
 String
@@ -317,10 +343,10 @@ default_import_path_name
 String
 
 BUTTON
-242
-596
-323
-629
+486
+559
+567
+592
 Diffuse
 diffuse-patches
 T
@@ -358,6 +384,23 @@ BUTTON
 Spawn Turtles
 spawn-turtles
 NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+121
+596
+253
+629
+Add Boundary
+add-boundary
+T
 1
 T
 OBSERVER

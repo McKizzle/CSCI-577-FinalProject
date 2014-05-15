@@ -73,7 +73,12 @@ end
 
 ; Update the movement of the cars. Also generate a bin. 
 to update
-  without-interruption [ask-concurrent turtles [ update-velocities ]] ; rules 1 - 3
+  without-interruption [ask-concurrent turtles [ 
+      set gap 0 
+      gap-ahead
+  ]]
+  without-interruption [ask-concurrent turtles [ update-velocities ]] ; rules 1 - 2
+  without-interruption [ask-concurrent turtles [ apply-fluctuations ]] ; rules 3
   without-interruption [ask-concurrent turtles [ jump speed]] ; rule 4
   set speeds sentence speeds [speed] of turtles
 ;  ask turtles [
@@ -84,10 +89,6 @@ end
 
 ; Move the cars to the cellular automota rules. 
 to update-velocities
-  ; Check the gap ahead
-  set gap 0
-  gap-ahead
-  
   ; If v > gap (to fast), then slow down to v:= gap. [rule 1]
   ifelse speed >= gap [
     set speed gap
@@ -105,7 +106,7 @@ to update-velocities
       set speed speed + 1 
       
       ; Particle Propagation: [Rule 3]
-      apply-fluctuations ; random brking and accelration. 
+      ;apply-fluctuations ; random brking and accelration. 
       ]
     ]
   ]
@@ -113,10 +114,6 @@ end
 
 ; Applies the random accelerations and braking witnessed in traffic. 
 to apply-fluctuations
-;  if gap > 0 [
-;    
-;  ]
-  
    let r random-float MAX_PROB
    ifelse r < braking-probability [ if speed > 0 [set speed speed - 1] ]
    [
@@ -226,7 +223,7 @@ number-of-cars
 number-of-cars
 1
 100
-50
+17
 1
 1
 NIL
@@ -256,7 +253,7 @@ fluctuation-probability
 fluctuation-probability
 0
 MAX_PROB
-0
+0.1
 MAX_PROB / 100
 1
 NIL
@@ -269,7 +266,7 @@ SWITCH
 158
 uniform-placement
 uniform-placement
-1
+0
 1
 -1000
 
@@ -280,7 +277,7 @@ SWITCH
 158
 uniform-speed
 uniform-speed
-1
+0
 1
 -1000
 
@@ -306,7 +303,7 @@ PLOT
 492
 Car Speeds
 time
-speed
+speed (units / tick)
 0.0
 100.0
 0.0
@@ -324,7 +321,7 @@ PLOT
 1374
 490
 Car Speed Distribution
-Speed
+Speed ( units / tick )
 Count
 0.0
 7.0
@@ -360,7 +357,7 @@ acceleration-probability
 acceleration-probability
 0
 MAX_PROB
-0.1
+0.2
 MAX_PROB / 100
 1
 NIL

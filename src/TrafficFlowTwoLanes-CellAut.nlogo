@@ -2,13 +2,14 @@ breed [ vehicles vehicle ]
 
 ; velocity   -> the speed of the vehicle
 ; gap        -> the cap in front of the vehicle. 
-; look-ahead -> used to find cars up ahead and adjust the velocity accordignly. 
-vehicles-own [ velocity gap ]
+; lane2left-gap -> the gap to the left of the car.
+; lane2right-gap -> the gap to the right of the car. 
+vehicles-own [ velocity lane2right-gap gap lane2left-gap used-move?]
 
 ; drivable? -> can this be driven on?
 patches-own [ drivable? ]
 
-globals [MAX_PROB speeds]
+globals [MAX_PROB speeds sample-vehicle watch-vehicle?]
 
 ;---------------------------------- INITIALIZATION ----------------------------------;
 to setup
@@ -19,6 +20,8 @@ to setup
   
   setup-roads
   place-vehicles
+  
+  set watch-vehicle? false
   
   reset-ticks
 end
@@ -53,6 +56,7 @@ to place-vehicles
   create-vehicles number-of-vehicles [
     set heading 90.0
     set ycor -2 ; place in right lane. 
+    set used-move? false;
     
     if not random-bool [
       set shape "truck"
@@ -80,6 +84,8 @@ to place-vehicles
     
     seperate-vehicle ; make sure it doesn't overlap
   ]
+  
+  set sample-vehicle one-of vehicles
 end
 
 to seperate-vehicle
@@ -103,20 +109,82 @@ end
 ;---------------------------------- UPDATEING ----------------------------------;
 
 to update
-  without-interruption [ask-concurrent vehicles [ update-velocities ]] ; rules 1 - 3
+  without-interruption [ask-concurrent vehicles [ 
+      set used-move? false
+      reset-gaps 
+      gap-ahead
+      gap-left
+      gap-right
+  ]]
+  without-interruption [ask-concurrent vehicles [ 
+      ; determine which lane to go to 
+      if lane-switching [
+        move-sideways ; Substep 1
+      ]
+  ]]
+  ; Substep 2
+  without-interruption [ask-concurrent vehicles [ update-velocities ]] ; rules 1 - 2
+  without-interruption [ask-concurrent vehicles [ apply-fluctuations]] ; rule 3
   without-interruption [ask-concurrent vehicles [ jump velocity]] ; rule 4
   set speeds sentence speeds [velocity] of vehicles
   tick
 end 
 
+; move the car to another lane (randomly)
+to move-sideways
+  ; Based on the gaps of the left and right lane randomly determine which one to switch to.
+  let r random-float MAX_PROB; generate a random value. 
+  
+  ; Switch to the lane with the larger gap. 
+  
+  if (lane2left-gap >= lane2right-gap) or (not [drivable?] of patch-at 0 -1)
+  [
+    if lane2left-gap > gap
+    [
+;      print "Left Turn"
+      try-move-left
+    ]
+  ]
+  
+  if lane2right-gap > lane2left-gap or (not [drivable?] of patch-at 0 1)
+  [
+    if lane2right-gap > gap
+    [
+;      print "Right Turn"
+      try-move-right
+    ]
+  ]
+end
+
+; attempts to move the vehicle to the left
+to try-move-left  
+  if [drivable?] of (patch-at 0 1) [
+      let r random-float MAX_PROB ; if needed perform the switch. 
+      
+      if r > (MAX_PROB - lane-change-probability) [
+        set ycor ycor + 1
+        set used-move? true
+      ]
+  ]
+end
+
+; attempts to move the vehicle to the right. 
+to try-move-right  
+  if [drivable?] of (patch-at 0 -1) [
+      let r random-float MAX_PROB ; if needed perform the switch. 
+      
+      if r > (MAX_PROB - lane-change-probability) [
+        set ycor ycor - 1
+        set used-move? true
+      ]
+  ]
+end
+
 to update-velocities
   ;set gap velocity
-  set gap 0 ; start by checking the first patch in front of the vehicle. 
-  gap-ahead
   
   ; If v > gap (to fast), then slow down to v:= gap. [rule 1]
   ifelse velocity >= gap [
-    ;print gap
     set velocity gap
   ] 
   ; Else if v < gap (enough headway) and v < v_max, then accelerate by one: v := v + 1 [rule 2]
@@ -129,10 +197,7 @@ to update-velocities
       ifelse gap = 0 [
         set velocity 0
       ] [
-        set velocity velocity + 1 
-      
-        ;[rule 3]
-        apply-fluctuations ; random brking and accelration. 
+        set velocity velocity + 1
       ]
     ]
   ]
@@ -141,21 +206,31 @@ end
 ; Applies the random accelerations and braking witnessed in traffic. 
 to apply-fluctuations
    let r random-float MAX_PROB
-   ifelse r < braking-probability [ if velocity > 0 [set velocity velocity - 1] ]
+   ifelse r < braking-probability [ 
+       if velocity > 0 [set velocity velocity - 1] 
+     ]
    [
      let velocity-n velocity + 1
      if (r >= braking-probability) and 
-        (r < braking-probability + acceleration-probability) and 
-        ((velocity-n < gap) or (velocity-n < speed-limit)) [ 
-       set velocity velocity + 1 
+        (r < (braking-probability + acceleration-probability)) and 
+        (velocity-n < gap) and 
+        (velocity-n <= speed-limit) [ 
+       set velocity velocity-n
      ]
    ]
 end
 
+; Finds all of the gaps for the car. AKA. Check lane to the left, lane to the right, and current lane. 
+to reset-gaps
+  set gap 0
+  set lane2right-gap 0
+  set lane2left-gap 0
+end
+
 ; Recursively "looks ahead" for patch occupancy. 
 to gap-ahead
-  if gap <= velocity [
-    let turtle-ahead one-of turtles-on patch-ahead (gap + 1)
+  if gap <= speed-limit [
+    let turtle-ahead one-of turtles-on ( patch-ahead (gap + 1) )
     if turtle-ahead = nobody [
        set gap gap + 1
        gap-ahead
@@ -163,7 +238,27 @@ to gap-ahead
   ]
 end
 
+; Recursively "looks ahead" in the left lane (relative to vehicle)
+to gap-left
+  if lane2left-gap <= speed-limit [
+    let turtle-ahead one-of turtles-on ( patch-at (lane2left-gap + 1) 1 )
+    if turtle-ahead = nobody [
+       set lane2left-gap lane2left-gap + 1
+       gap-left
+    ]
+  ]
+end
 
+; Recursively "looks ahead" in the right lane (relative to vehicle)
+to gap-right
+  if lane2right-gap <= speed-limit [
+    let turtle-ahead one-of turtles-on (patch-at (lane2right-gap + 1) -1)
+    if turtle-ahead = nobody [
+       set lane2right-gap lane2right-gap + 1
+       gap-right
+    ]
+  ]
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 6
@@ -218,7 +313,7 @@ number-of-vehicles
 number-of-vehicles
 1
 100
-28
+35
 1
 1
 NIL
@@ -246,7 +341,7 @@ SWITCH
 144
 uniform-placement
 uniform-placement
-0
+1
 1
 -1000
 
@@ -257,7 +352,7 @@ SWITCH
 180
 uniform-velocity
 uniform-velocity
-0
+1
 1
 -1000
 
@@ -270,7 +365,7 @@ speed-limit
 speed-limit
 0
 6
-4
+6
 1
 1
 NIL
@@ -284,9 +379,9 @@ SLIDER
 lane-change-probability
 lane-change-probability
 0
-100
-43
-1
+MAX_PROB
+0.3
+MAX_PROB / 100
 1
 NIL
 HORIZONTAL
@@ -303,7 +398,7 @@ T
 T
 OBSERVER
 NIL
-NIL
+U
 NIL
 NIL
 0
@@ -332,7 +427,7 @@ acceleration-probability
 acceleration-probability
 0
 MAX_PROB
-0.25
+0.2
 MAX_PROB / 100
 1
 NIL
@@ -341,7 +436,7 @@ HORIZONTAL
 PLOT
 572
 106
-989
+1017
 378
 Car Speeds
 Speed ( units / tick )
@@ -356,6 +451,7 @@ true
 PENS
 "Max Velocity" 1.0 0 -2674135 true "" "plot max [velocity] of vehicles"
 "Min Velocity" 1.0 0 -13791810 true "" "plot min [velocity] of vehicles"
+"Sample Velocity" 1.0 0 -16710653 true "" "plot [velocity] of sample-vehicle"
 
 PLOT
 571
@@ -376,15 +472,87 @@ PENS
 "default" 1.0 0 -13345367 true "" "histogram speeds"
 
 MONITOR
-360
-327
-472
-372
+1023
+106
+1135
+151
 Vehicle Density
 number-of-vehicles / (count patches with [drivable? = true])
 4
 1
 11
+
+BUTTON
+83
+397
+265
+430
+Watch / Unwatch Vehicle
+ifelse watch-vehicle? [\n  watch sample-vehicle\n  set watch-vehicle? false\n] [ \n  rp\n  set watch-vehicle? true\n]
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+MONITOR
+422
+479
+514
+524
+Gap Left Lane
+;sentence (sentence ([lane2left-gap] of sample-vehicle) ([gap] of sample-vehicle)) ([lane2right-gap] of sample-vehicle)\n[lane2left-gap] of sample-vehicle
+17
+1
+11
+
+MONITOR
+423
+577
+515
+622
+Gap Right Lane
+;sentence (sentence ([lane2left-gap] of sample-vehicle) ([gap] of sample-vehicle)) ([lane2right-gap] of sample-vehicle)\n[lane2right-gap] of sample-vehicle
+17
+1
+11
+
+MONITOR
+423
+528
+514
+573
+Gap Ahead
+;sentence (sentence ([lane2left-gap] of sample-vehicle) ([gap] of sample-vehicle)) ([lane2right-gap] of sample-vehicle)\n[gap] of sample-vehicle
+17
+1
+11
+
+MONITOR
+436
+428
+498
+473
+Velocity
+[velocity] of sample-vehicle
+17
+1
+11
+
+SWITCH
+356
+321
+504
+354
+lane-switching
+lane-switching
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?

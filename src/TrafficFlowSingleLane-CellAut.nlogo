@@ -1,4 +1,4 @@
-turtles-own [ speed gap look-ahead]
+turtles-own [ speed gap]
 
 globals [MAX_PROB speeds]
 
@@ -9,7 +9,7 @@ to setup
   setup-patches
   setup-cars
   
-  set MAX_PROB 100
+  set MAX_PROB 1
   set speeds [] ; initialize it to an empty list
   
   reset-ticks
@@ -41,10 +41,9 @@ to setup-cars
   set-default-shape turtles "car" 
   
   let spaceing int(world-width / number-of-cars)
-  print spaceing
   let cxor 0
   crt number-of-cars [
-    set color blue
+    set heading  90
     set ycor 0
     
     ifelse uniform-placement [
@@ -53,7 +52,6 @@ to setup-cars
     ] [
       set xcor random world-width ; wraps around so i don't have to worry about min x and max x
     ]
-    set heading  90
     
     ifelse uniform-speed [
       set speed initial-speed
@@ -73,57 +71,73 @@ to seperate-cars
   ]
 end
 
-; Begin the simulation.
+; Update the movement of the cars. Also generate a bin. 
 to update
-  move-cars
-  ask turtles [
-   set speeds lput speed speeds 
-  ]
+  without-interruption [ask-concurrent turtles [ update-velocities ]] ; rules 1 - 3
+  without-interruption [ask-concurrent turtles [ jump speed]] ; rule 4
+  set speeds sentence speeds [speed] of turtles
+;  ask turtles [
+;   set speeds lput speed speeds 
+;  ]
   tick
 end
 
 ; Move the cars to the cellular automota rules. 
-to move-cars
-  ask turtles [
-   ; Check the gap ahead
-   set gap speed
-   set look-ahead gap
-   gap_ahead
-   ; If v > gap (to fast), then slow down to v:= gap. [rule 1]
-   ifelse speed > gap [
-    set speed gap 
-   ] 
-   ; Else if v < gap (enough headway) and v < v_max, then accelerate by one: v := v + 1 [rule 2]
-   [
-     ifelse speed >= speed-limit
-     [
+to update-velocities
+  ; Check the gap ahead
+  set gap 0
+  gap-ahead
+  
+  ; If v > gap (to fast), then slow down to v:= gap. [rule 1]
+  ifelse speed >= gap [
+    set speed gap
+  ] 
+  ; Else if v < gap (enough headway) and v < v_max, then accelerate by one: v := v + 1 [rule 2]
+  [
+    ifelse speed >= speed-limit
+    [
       set speed speed-limit
-     ]
-     [
+    ]
+    [
+      ifelse gap = 0 [
+        set speed 0
+      ] [
       set speed speed + 1 
-     ]
-   ]
-   ; Randomization: If after the above steps the velocity is larger than zeror, then with probability p reduce v by one. [rule 3]
-   if (random MAX_PROB > (MAX_PROB - fluctuation-probability)) and (speed > 0)
-   [
-    set speed speed - 1 
-   ]
-   ; Particle propagation: Each particel moves v sites ahead. [rule 4]
-   fd speed
+      
+      ; Particle Propagation: [Rule 3]
+      apply-fluctuations ; random brking and accelration. 
+      ]
+    ]
   ]
 end
 
-; Recursively checks for turtles within the maximum velocity. 
-to gap_ahead
-  if look-ahead >= 1 [
-    set look-ahead look-ahead - 1
-    let turtle-ahead one-of turtles-on patch-ahead gap
-    if turtle-ahead != nobody [
-      set gap gap - 1 
-    ]
-    gap_ahead
-  ]
+; Applies the random accelerations and braking witnessed in traffic. 
+to apply-fluctuations
+;  if gap > 0 [
+;    
+;  ]
+  
+   let r random-float MAX_PROB
+   ifelse r < braking-probability [ if speed > 0 [set speed speed - 1] ]
+   [
+     let speed-n speed + 1
+     if (r >= braking-probability) and 
+        (r < (braking-probability + acceleration-probability)) and 
+        ((speed-n <  gap) or (speed-n < speed-limit)) [
+       set speed speed-n
+     ]
+   ]
+end
 
+; Recursively "looks ahead" for patch occupancy. 
+to gap-ahead
+  if gap <= speed [
+    let turtle-ahead one-of turtles-on patch-ahead (gap + 1)
+    if turtle-ahead = nobody [
+       set gap gap + 1
+       gap-ahead
+    ]
+  ]
 end
 
 ; Extra Functions
@@ -145,9 +159,9 @@ end
 GRAPHICS-WINDOW
 9
 10
-1670
+838
 80
-63
+31
 1
 13.0
 1
@@ -159,8 +173,8 @@ GRAPHICS-WINDOW
 1
 0
 1
--63
-63
+-31
+31
 -1
 1
 1
@@ -206,13 +220,13 @@ NIL
 SLIDER
 95
 86
-287
+459
 119
 number-of-cars
 number-of-cars
 1
 100
-30
+50
 1
 1
 NIL
@@ -225,7 +239,7 @@ SLIDER
 254
 speed-limit
 speed-limit
-0
+1
 6
 6
 1
@@ -241,9 +255,9 @@ SLIDER
 fluctuation-probability
 fluctuation-probability
 0
-100
-50
-1
+MAX_PROB
+0
+MAX_PROB / 100
 1
 NIL
 HORIZONTAL
@@ -255,14 +269,14 @@ SWITCH
 158
 uniform-placement
 uniform-placement
-0
+1
 1
 -1000
 
 SWITCH
-298
+297
 125
-491
+490
 158
 uniform-speed
 uniform-speed
@@ -271,10 +285,10 @@ uniform-speed
 -1000
 
 SLIDER
-297
-86
-491
-119
+468
+87
+662
+120
 initial-speed
 initial-speed
 0
@@ -311,16 +325,57 @@ PLOT
 490
 Car Speed Distribution
 Speed
-Speed
+Count
 0.0
 7.0
 0.0
-1.0
+100.0
 true
 false
-"set-plot-x-range 0 (speed-limit)\n;set-plot-y-range 0 (number-of-cars)\nset-plot-pen-mode 1\nset-histogram-num-bars speed-limit" "set-plot-x-range 0 (speed-limit)\n;set-plot-y-range 0 (number-of-cars)\nset-histogram-num-bars speed-limit"
+"set-plot-x-range 0 speed-limit\nset-plot-pen-mode 1\nset-histogram-num-bars speed-limit" "set-plot-x-range 0 speed-limit\nset-plot-pen-mode 1\nset-histogram-num-bars speed-limit"
 PENS
 "Speed Distribution" 1.0 0 -13345367 true "" "histogram speeds"
+
+SLIDER
+80
+295
+294
+328
+braking-probability
+braking-probability
+0
+MAX_PROB
+0.1
+MAX_PROB / 100
+1
+NIL
+HORIZONTAL
+
+SLIDER
+80
+334
+293
+367
+acceleration-probability
+acceleration-probability
+0
+MAX_PROB
+0.1
+MAX_PROB / 100
+1
+NIL
+HORIZONTAL
+
+MONITOR
+300
+509
+362
+554
+Density
+number-of-cars / (count patches with [pcolor = gray])
+4
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?

@@ -1,12 +1,178 @@
+breed [ vehicles vehicle ]
+
+; velocity   -> the speed of the vehicle
+; gap        -> the cap in front of the vehicle. 
+; look-ahead -> used to find cars up ahead and adjust the velocity accordignly. 
+vehicles-own [ velocity gap ]
+
+; drivable? -> can this be driven on?
+patches-own [ drivable? ]
+
+globals [MAX_PROB speeds]
+
+;---------------------------------- INITIALIZATION ----------------------------------;
+to setup
+  clear-all
+  
+  set MAX_PROB 1
+  set speeds [] ; initialize it to an empty list
+  
+  setup-roads
+  place-vehicles
+  
+  reset-ticks
+end
+
+to setup-roads
+  ask patches [
+   set drivable? false
+   ifelse (pycor = 0) or (pycor = -3)[
+    set pcolor green 
+   ] [
+    set drivable? true
+    set pcolor gray
+   ]
+  ]
+end
+
+to place-vehicles
+  clear-turtles
+  set-default-shape vehicles "car" 
+  
+  ; Make sure we don't place too many cars. 
+  if number-of-vehicles > world-width
+  [
+    user-message (word "There are too many cars for the amount of road.  Please decrease the NUMBER-OF-CARS slider to below "
+                       (world-width + 1)
+                       " and press the SETUP button again.  The setup has stopped.")
+    stop
+  ]
+  
+  let spaceing int(world-width / number-of-vehicles) ; how much to seperate each vehicle
+  let cxor 0
+  create-vehicles number-of-vehicles [
+    set heading 90.0
+    set ycor -2 ; place in right lane. 
+    
+    if not random-bool [
+      set shape "truck"
+    ]
+    
+    ; Set Velocities
+    ifelse uniform-velocity [
+      ; Uniform velocities
+      set velocity initial-velocity
+    ] [
+      ; Random velocities
+      set velocity random speed-limit
+    ]
+    
+    ; uniform-placement
+    ifelse uniform-placement [
+      ; place cars at equal spacing
+      set xcor min-pxcor + cxor
+      set cxor cxor + spaceing
+    ] [
+      ; place cars sporadically everywhere
+      set xcor random world-width
+    ] 
+
+    
+    seperate-vehicle ; make sure it doesn't overlap
+  ]
+end
+
+to seperate-vehicle
+  if any? other vehicles-here
+  [ 
+    fd 1
+    seperate-vehicle
+  ]
+end
+
+to-report random-bool 
+  let r random-float 1
+  ifelse r > 0.5 [
+    report true
+  ] [
+    report false
+  ]
+end
+
+
+;---------------------------------- UPDATEING ----------------------------------;
+
+to update
+  without-interruption [ask-concurrent vehicles [ update-velocities ]] ; rules 1 - 3
+  without-interruption [ask-concurrent vehicles [ jump velocity]] ; rule 4
+  set speeds sentence speeds [velocity] of vehicles
+  tick
+end 
+
+to update-velocities
+  ;set gap velocity
+  set gap 0 ; start by checking the first patch in front of the vehicle. 
+  gap-ahead
+  
+  ; If v > gap (to fast), then slow down to v:= gap. [rule 1]
+  ifelse velocity >= gap [
+    ;print gap
+    set velocity gap
+  ] 
+  ; Else if v < gap (enough headway) and v < v_max, then accelerate by one: v := v + 1 [rule 2]
+  [
+    ifelse velocity >= speed-limit
+    [
+      set velocity speed-limit
+    ]
+    [
+      ifelse gap = 0 [
+        set velocity 0
+      ] [
+        set velocity velocity + 1 
+      
+        ;[rule 3]
+        apply-fluctuations ; random brking and accelration. 
+      ]
+    ]
+  ]
+end
+
+; Applies the random accelerations and braking witnessed in traffic. 
+to apply-fluctuations
+   let r random-float MAX_PROB
+   ifelse r < braking-probability [ if velocity > 0 [set velocity velocity - 1] ]
+   [
+     let velocity-n velocity + 1
+     if (r >= braking-probability) and 
+        (r < braking-probability + acceleration-probability) and 
+        ((velocity-n < gap) or (velocity-n < speed-limit)) [ 
+       set velocity velocity + 1 
+     ]
+   ]
+end
+
+; Recursively "looks ahead" for patch occupancy. 
+to gap-ahead
+  if gap <= velocity [
+    let turtle-ahead one-of turtles-on patch-ahead (gap + 1)
+    if turtle-ahead = nobody [
+       set gap gap + 1
+       gap-ahead
+    ]
+  ]
+end
+
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 6
 10
-848
-93
+976
+101
 -1
 -1
-13.0
+15.0
 1
 10
 1
@@ -18,19 +184,19 @@ GRAPHICS-WINDOW
 1
 0
 63
+-3
 0
-3
-0
-0
+1
+1
 1
 ticks
 30.0
 
 BUTTON
-10
-109
-76
-204
+9
+111
+75
+206
 Setup
 setup
 NIL
@@ -44,40 +210,40 @@ NIL
 1
 
 SLIDER
+85
+111
+349
+144
+number-of-vehicles
+number-of-vehicles
+1
+100
+28
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
 86
-109
-259
-142
-number-of-cars
-number-of-cars
-0
-100
-30
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-87
-145
-259
-178
+147
+350
+180
 initial-velocity
 initial-velocity
 0
 6
-5
+2
 1
 1
 NIL
 HORIZONTAL
 
 SWITCH
-300
-110
-477
-143
+355
+111
+532
+144
 uniform-placement
 uniform-placement
 0
@@ -85,56 +251,41 @@ uniform-placement
 -1000
 
 SWITCH
-300
-146
-477
-179
+355
+147
+532
+180
 uniform-velocity
 uniform-velocity
-1
+0
 1
 -1000
 
 SLIDER
-105
-285
-299
-318
-fluctuation-probability
-fluctuation-probability
+356
+284
+560
+317
+speed-limit
+speed-limit
 0
-100
-25
+6
+4
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-105
-330
-298
-363
-speed-limit
-speed-limit
-0
-6
-6
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-316
-286
-520
-319
+84
+357
+354
+390
 lane-change-probability
 lane-change-probability
 0
 100
-55
+43
 1
 1
 NIL
@@ -144,7 +295,7 @@ BUTTON
 12
 284
 78
-379
+389
 Update
 update
 T
@@ -156,6 +307,84 @@ NIL
 NIL
 NIL
 0
+
+SLIDER
+82
+284
+353
+317
+braking-probability
+braking-probability
+0
+MAX_PROB
+0.1
+MAX_PROB / 100
+1
+NIL
+HORIZONTAL
+
+SLIDER
+82
+321
+353
+354
+acceleration-probability
+acceleration-probability
+0
+MAX_PROB
+0.25
+MAX_PROB / 100
+1
+NIL
+HORIZONTAL
+
+PLOT
+572
+106
+989
+378
+Car Speeds
+Speed ( units / tick )
+Ticks
+0.0
+10.0
+0.0
+7.0
+true
+true
+"" "set-plot-x-range (ticks - 100) ticks"
+PENS
+"Max Velocity" 1.0 0 -2674135 true "" "plot max [velocity] of vehicles"
+"Min Velocity" 1.0 0 -13791810 true "" "plot min [velocity] of vehicles"
+
+PLOT
+571
+381
+1017
+653
+Velocity Distribution
+Velocities ( unit / tick )
+Count
+0.0
+10.0
+0.0
+10.0
+true
+false
+"set-plot-x-range 0 speed-limit\nset-plot-pen-mode 1\nset-histogram-num-bars speed-limit" "set-plot-x-range 0 speed-limit\nset-plot-pen-mode 1\nset-histogram-num-bars speed-limit"
+PENS
+"default" 1.0 0 -13345367 true "" "histogram speeds"
+
+MONITOR
+360
+327
+472
+372
+Vehicle Density
+number-of-vehicles / (count patches with [drivable? = true])
+4
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?

@@ -120,7 +120,8 @@ to apply-fluctuations
      let speed-n speed + 1
      if (r >= braking-probability) and 
         (r < (braking-probability + acceleration-probability)) and 
-        ((speed-n <  gap) or (speed-n < speed-limit)) [
+        (speed-n <  gap) and 
+        (speed-n < speed-limit) [
        set speed speed-n
      ]
    ]

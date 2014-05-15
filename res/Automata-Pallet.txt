@@ -1,0 +1,8 @@
+#00ff00
+#ff00ff
+#ffffff
+#ff0000
+#010101
+#ffff00
+#0000ff
+#00ffff

@@ -33,7 +33,7 @@ to setup-roads
     set pcolor green 
    ] [
     set drivable? true
-    set pcolor gray
+    set pcolor black
    ]
   ]
 end
@@ -313,7 +313,7 @@ number-of-vehicles
 number-of-vehicles
 1
 100
-35
+64
 1
 1
 NIL
@@ -451,7 +451,9 @@ true
 PENS
 "Max Velocity" 1.0 0 -2674135 true "" "plot max [velocity] of vehicles"
 "Min Velocity" 1.0 0 -13791810 true "" "plot min [velocity] of vehicles"
-"Sample Velocity" 1.0 0 -16710653 true "" "plot [velocity] of sample-vehicle"
+"Sample Velocity" 1.0 0 -16710653 true "" ";plot [velocity] of sample-vehicle"
+"Average Velocity" 1.0 0 -11085214 true "" "plot mean [velocity] of vehicles"
+"Median  Velocity" 1.0 0 -817084 true "" ";plot median [velocity] of vehicles"
 
 PLOT
 571
@@ -483,10 +485,10 @@ number-of-vehicles / (count patches with [drivable? = true])
 11
 
 BUTTON
-83
-397
-265
-430
+232
+516
+414
+549
 Watch / Unwatch Vehicle
 ifelse watch-vehicle? [\n  watch sample-vehicle\n  set watch-vehicle? false\n] [ \n  rp\n  set watch-vehicle? true\n]
 NIL
@@ -550,7 +552,7 @@ SWITCH
 354
 lane-switching
 lane-switching
-1
+0
 1
 -1000
 

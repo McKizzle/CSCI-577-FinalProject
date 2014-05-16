@@ -1,30 +1,93 @@
-patches-own [boundary? sink? source? sink_distance]
-globals [boundary_pcolor sink_pcolor source_pcolor path_pcolor sink_elevation source_elevation boundary_elevation]
+; boundary? -> if the patch is a boundary
+; sink?     -> if the patch is a sink
+; source?   -> if the patch is a source
+; sink-distance -> the distance to the sink
+; previous-patch-x -> the x position of the prvious patch
+; previous-patch-y -> the y position of the prvious patch
+patches-own [boundary? sink? source? sink-distance previous-patch previous-patch-x previous-patch-y]
 
-to setup
+; boundary-pcolor -> the default bounday color
+; sink-color      -> the default sink color
+; source-color    -> the default source color
+; path-color      -> the default path color
+; boundary-elvation -> the default boundary elevation
+; PROB_MAX -> a probability constant. 
+globals [boundary-pcolor sink-pcolor source-pcolor path-pcolor PROB_MAX]
+
+to square-room
+  setup-patches
+  
+  ask patches [
+     if (pxcor = max-pxcor) or (pxcor = min-pxcor)
+     [
+       enable-boundary
+     ]
+     
+     if (pycor = max-pycor) or (pycor = min-pycor)
+     [
+       enable-boundary
+     ]
+  ]
+  
+  ask patches [ paint-paths set-distances ]
+end
+
+to setup-default
   set default_export_path_name "../patches/CSD_Custom_World.csv"
   set default_import_path_name "../patches/CSD_Default_World.csv"
-  set sink_elevation 0
-  set source_elevation 200
-  set boundary_elevation 1000
+  
+  set-patch-size ptch-size
+  
+  setup-globals
+  
+  import-csd-world
+end
+
+to setup-globals
+  set sink-elevation 1.0E-4
+  set source-elevation 1
+  set boundary-elevation 1000
+  set PROB_MAX 1
   setup-colors
   ;ask patches [ paint-paths set-distances] ; let the user manually repaint teh path eleveations. 
   ask turtles [ die ] ; Kill all turtles if any
 end
 
+; 
+to setup-blank
+  setup-patches
+  ask patches [paint-paths]
+  ask patches [set-distances]
+  
+  set default_export_path_name "../patches/CSD_Default_World.csv"
+  set default_import_path_name "../patches/Blank_World.csv"
+end
+
+to setup-patches
+  ask patches
+  [
+   set boundary? false
+   set sink? false
+   set source? false
+   set sink-distance 0 
+  ]
+end
+
 to set-distances
-  set sink_distance sink_elevation
+  set sink-distance sink-elevation
   if source? = True [
-   set sink_distance source_elevation;
+   set sink-distance source-elevation;
   ]
   if boundary? = True [
-   set sink_distance boundary_elevation 
+   set sink-distance boundary-elevation 
   ]
 end
 
 
 to import-csd-world
   import-world default_import_path_name
+  
+  set-patch-size ptch-size
 end
 
 to export-csd-world
@@ -32,17 +95,17 @@ to export-csd-world
 end
   
 to setup-colors
-  set boundary_pcolor 130
-  set sink_pcolor 11
-  set source_pcolor 19
-  set path_pcolor 15
+  set boundary-pcolor 130
+  set sink-pcolor 11
+  set source-pcolor 19
+  set path-pcolor 15
 end
 
 to black-as-boundary ;; goes through and converts all of the black tiles to boundarys (aka undifussable values.)
   ask patches [
     if pcolor = 0 [ 
       set boundary? True
-      set boundary_pcolor 130
+      set boundary-pcolor 130
     ]
   ]
 end
@@ -59,7 +122,7 @@ to white-as-path
   ask patches [
     if pcolor = 9.9 [
       set boundary? False
-      set pcolor source_pcolor 
+      set pcolor source-pcolor 
     ]
   ]
 end
@@ -70,17 +133,58 @@ to paint-paths
   ]
 end
 
+;-------------------- SINK
+to enable-sink
+  set sink? True
+  set source? False
+  set pcolor sink-pcolor ; set to source pcolor
+end
+
+to disable-sink
+  set sink? False
+  set pcolor path-pcolor ; set to the default path color
+end
+;--------------------
+
+;-------------------- SOURCE
+to enable-source
+  set sink? False
+  set source? True
+  set pcolor source-pcolor ; set to source pcolor
+end
+
+to disable-source
+  set source? False
+  set pcolor path-pcolor ; set to the default path color
+end
+;--------------------
+
+;-------------------- BOUNDARY
+to enable-boundary
+  set boundary?  True
+  set source? False
+  set sink? False
+  set sink-distance boundary-elevation
+  set pcolor boundary-pcolor
+end
+
+to disable-boundary
+  set boundary? False
+  set source? False
+  set sink? False
+  set sink-distance sink-elevation
+  set pcolor path-pcolor
+end
+;--------------------
+
 to add-sink
   while [mouse-down?] [
     ask patch mouse-xcor mouse-ycor [
       if not boundary? [
         ifelse sink? = True [
-          set sink? False
-          set pcolor path_pcolor ; set to the default path color
+          disable-sink
         ] [
-          set sink? True
-          set source? False
-          set pcolor sink_pcolor ; set to source pcolor
+          enable-sink
         ]
       ]
     ]
@@ -93,12 +197,9 @@ to add-source
     ask patch mouse-xcor mouse-ycor [
       if not boundary? [
         ifelse source? = True [
-          set source? False
-          set pcolor path_pcolor ; set to the default path color
+          disable-source
         ] [
-          set sink? False
-          set source? True
-          set pcolor source_pcolor ; set to source pcolor
+          enable-source
         ]
       ]
     ]
@@ -110,17 +211,9 @@ to add-boundary
   while [mouse-down?] [
     ask patch mouse-xcor mouse-ycor [
       ifelse not boundary? [
-        set boundary?  True
-        set source? False
-        set sink? False
-        set sink_distance boundary_elevation
-        set pcolor boundary_pcolor
+        enable-boundary
       ] [
-        set boundary? False
-        set source? False
-        set sink? False
-        set sink_distance sink_elevation
-        set pcolor path_pcolor
+        disable-boundary
       ]
     ]
   ]
@@ -137,10 +230,16 @@ to add-turtle
 end
 
 to spawn-turtles
+  set-default-shape turtles "person"
+  let num-spawned 0
   ask patches [
-    if boundary? = False [
-      sprout 1
+    if (num-spawned < people-count) or fill-room [
+      if boundary? = False [
+        sprout 1
+        set num-spawned num-spawned + 1
+      ]
     ]
+    
   ]
 end
    
@@ -156,10 +255,10 @@ to diffuse-dist
   if (boundary? = False) and (sink? = False) and (source? = False) [ 
     ask ngbrs [
       if (boundary? = False) [
-        set wghts fput sink_distance wghts ; fput appends to a list
+        set wghts fput sink-distance wghts ; fput appends to a list
       ] 
     ]
-    set sink_distance mean wghts
+    set sink-distance mean wghts
   ]
 end
 
@@ -176,12 +275,19 @@ to diffuse-pcolor
   ]
 end
 
+;;--------------------------------------- SIMULATION FUNCTIONS ---------------------------------------------------;;
+;;--------------------------------------- SIMULATION FUNCTIONS ---------------------------------------------------;;
+;;--------------------------------------- SIMULATION FUNCTIONS ---------------------------------------------------;;
+
 ;; Update and turtle motions
 to update
+;  ask turtles [ set previous-patch ]
+;  ask turtles [ move-turtle ]
   ask turtles [
+    set previous-patch patch-here ; stor
     let xcor_0 xcor
     let ycor_0 ycor
-    downhill sink_distance
+    downhill sink-distance
     if (count turtles-at 0 0) >= 2 [
       set xcor xcor_0
       set ycor ycor_0
@@ -190,28 +296,34 @@ to update
   ]
 end
 
+; Implement the motion algorithm as described in 
+; Modelling of self-driven particles: Foraging ants and pedestrians -- Katsuhiro Nishinari,  Ken Sugawara, Toshiya Kazama, Andreas Schadschneider, Debashish Chowdhury
+to move-turtle
+  ; 
+end
+  
 @#$#@#$#@
 GRAPHICS-WINDOW
-6
 10
-366
-591
+10
+727
+748
 -1
 -1
-10.0
+7.0
 1
 10
 1
 1
 1
 0
-1
-1
+0
+0
 1
 0
-34
+100
 0
-54
+100
 0
 0
 1
@@ -219,11 +331,11 @@ ticks
 30.0
 
 BUTTON
-6
-630
-120
-663
-Add Source
+803
+436
+938
+469
+2. Add Source
 add-source
 T
 1
@@ -236,29 +348,12 @@ NIL
 1
 
 BUTTON
-6
-596
-120
-629
-Add Sink
-add-sink
-T
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-372
+1074
 10
-446
+1239
 43
-Setup
-setup
+Setup Default World
+setup-default
 NIL
 1
 T
@@ -270,12 +365,12 @@ NIL
 1
 
 BUTTON
-370
-559
-484
-592
-Paint Paths
-paint-paths
+804
+479
+1020
+512
+Set-Elevations and Paint Paths
+paint-paths\nset-distances
 NIL
 1
 T
@@ -287,10 +382,10 @@ NIL
 1
 
 BUTTON
-413
-75
-549
-108
+853
+72
+989
+105
 Import CSD -->
 import-csd-world
 NIL
@@ -304,21 +399,21 @@ NIL
 1
 
 INPUTBOX
-550
-109
-799
-169
+990
+106
+1239
+166
 default_export_path_name
-../patches/CSD_Custom_World.csv
+../patches/Room_100x100.csv
 1
 0
 String
 
 BUTTON
-369
-136
-548
-169
+809
+133
+988
+166
 Export World As ---->
 export-csd-world
 NIL
@@ -332,22 +427,22 @@ NIL
 1
 
 INPUTBOX
-550
-48
-799
-108
+990
+45
+1239
+105
 default_import_path_name
-../patches/CSD_Default_World.csv
+../patches/Room_100x100.csv
 1
 0
 String
 
 BUTTON
-486
-559
-567
-592
-Diffuse
+804
+514
+1021
+547
+3. Diffuse
 diffuse-patches
 T
 1
@@ -360,10 +455,10 @@ NIL
 1
 
 BUTTON
-370
-346
-455
-379
+803
+646
+888
+679
 Update
 update
 T
@@ -377,11 +472,11 @@ NIL
 1
 
 BUTTON
-476
-346
-609
-379
-Spawn Turtles
+1137
+564
+1270
+597
+Spawn People
 spawn-turtles
 NIL
 1
@@ -394,12 +489,180 @@ NIL
 1
 
 BUTTON
-121
-596
-253
-629
-Add Boundary
+802
+365
+936
+398
+2. Add Boundary
 add-boundary
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+882
+12
+986
+45
+Erase World
+setup-blank
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+INPUTBOX
+1296
+273
+1451
+333
+ptch-size
+7
+1
+0
+Number
+
+BUTTON
+1180
+273
+1294
+306
+Set Patch Size
+set-patch-size ptch-size\n
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+INPUTBOX
+1296
+335
+1451
+395
+sink-elevation
+1.0E-4
+1
+0
+Number
+
+INPUTBOX
+1296
+395
+1451
+455
+source-elevation
+1
+1
+0
+Number
+
+SLIDER
+803
+684
+1162
+717
+panic-level
+panic-level
+0
+source-elevation * 2
+20
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+803
+726
+1161
+759
+pheremone-decay-rate
+pheremone-decay-rate
+0
+PROB_MAX
+1
+PROB_MAX / 100
+1
+NIL
+HORIZONTAL
+
+BUTTON
+802
+327
+943
+360
+1. Setup Variables
+setup-globals
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SLIDER
+1137
+599
+1459
+632
+people-count
+people-count
+1
+100
+100
+1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+1137
+634
+1460
+667
+fill-room
+fill-room
+1
+1
+-1000
+
+INPUTBOX
+1296
+456
+1451
+516
+boundary-elevation
+1000
+1
+0
+Number
+
+BUTTON
+803
+401
+937
+434
+2. Add Sink
+add-sink
 T
 1
 T
@@ -413,39 +676,51 @@ NIL
 @#$#@#$#@
 ## WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
+Simulates crowd flow using cellular automata. 
 
 ## HOW IT WORKS
 
-(what rules the agents use to create the overall behavior of the model)
+As of now the rules have yet to be implemented. The only rule is that if a patch contains a turtle then other turtles cannot access that patch.
 
 ## HOW TO USE IT
 
-(how to use the model, including a description of each of the items in the Interface tab)
+  1. Click on the _Import CSD_ button. If you wish you can choose which CSD to import, but it is best use the default. 
+
+  2. Click the _Setup_ button.
+
+  3. Next click the _Update_ button
+
+  4. Add turtles by clicking the _Spawn Turtles_ button. 
+  
+  5. You can modify the boundaries, sources, and sinks of the system if you wish with the _Add Sink_, _Add Source_, and _Add Boundary_ buttons. 
+
+  6. Once you have modified the layout make sure to _Diffuse_ the model so that agents can find the sinks. 
 
 ## THINGS TO NOTICE
 
-(suggested things for the user to notice while running the model)
+Notice how much fun this is?
 
 ## THINGS TO TRY
 
-(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
+None yet. I plan on allowing users to import images in the future. 
 
 ## EXTENDING THE MODEL
 
-(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+Add the cellular automation rules. 
 
 ## NETLOGO FEATURES
 
-(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
+None founded yet. 
 
 ## RELATED MODELS
 
-(models in the NetLogo Models Library and elsewhere which are of related interest)
+Look at the Game of Life models. 
 
 ## CREDITS AND REFERENCES
 
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
+The insperation for this model if from "Particle hopping models and traffic flow theory" by Kai Nagel. 
+
+Will also be using the book "Introduction to Modern Traffic Flow Theory and Control" by Boris S. Kerner.
 @#$#@#$#@
 default
 true

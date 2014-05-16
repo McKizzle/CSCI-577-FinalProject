@@ -315,6 +315,7 @@ true
 PENS
 "Min Speed" 1.0 0 -13791810 true "" "plot min [ speed ] of turtles"
 "Max Speed" 1.0 0 -2674135 true "" "plot max [ speed ] of turtles"
+"Average Speed" 1.0 0 -13840069 true "" "plot mean [ speed ] of turtles"
 
 PLOT
 954

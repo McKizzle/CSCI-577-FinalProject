@@ -13,7 +13,7 @@ turtles-own [previous-patch target-patch previous-patch-x previous-patch-y]
 ; path-color      -> the default path color
 ; boundary-elvation -> the default boundary elevation
 ; PROB_MAX -> a probability constant. 
-globals [boundary-pcolor sink-pcolor source-pcolor path-pcolor PROB_MAX]
+globals [boundary-pcolor sink-pcolor source-pcolor path-pcolor original-people-count PROB_MAX]
 
 extensions [table] ; essentially a dictionary. 
 
@@ -72,6 +72,8 @@ to setup-globals
   set PROB_MAX 1
   setup-colors
   ask turtles [ die ] ; Kill all turtles if any
+  
+  reset-ticks
 end
 
 ; 
@@ -323,15 +325,14 @@ end
 
 ;; Update and turtle motions
 to update
-  ask turtles [ if (sink? = True) [ die ] ]
   ask turtles [ set previous-patch patch-here]
   ask patches [ 
     diffuse-pheremones ; apply the default pheremone diffusion rate. 
     apply-pheremones ; set phereome level to one if there is a person 
     decay-pheremones  
   ] 
-  ask turtles [ if (sink? = True) [ die ] ]
   ask turtles [ move-turtle ]
+  ask turtles [ if (sink? = True) [ die ] ]
   ask turtles [ ; This part here is part of the topology mentioned that forces movement towards the doors. aka the K_s value. 
     set previous-patch patch-here ; stor
     let xcor_0 xcor
@@ -343,12 +344,14 @@ to update
     ]
   ]
   ask turtles [ if (sink? = True) [ die ] ]
+  
+  tick
 end
 
 to apply-pheremones
   let person one-of turtles-on patch-at 0 0
   
-  if person != nobody [ set pheremone-level 1 ]
+  if person != nobody [ set pheremone-level 100 ]
 end
 
 to decay-pheremones
@@ -356,7 +359,7 @@ to decay-pheremones
   
   if r < pheremone-decay-prob
   [
-    if pheremone-level > 0 [ set pheremone-level pheremone-level - 0.25 ]
+    if pheremone-level > 0 [ set pheremone-level pheremone-level - 1 ]
   ]
 end
 
@@ -435,11 +438,11 @@ end
 GRAPHICS-WINDOW
 10
 10
-405
-646
+727
+748
 -1
 -1
-11.0
+7.0
 1
 10
 1
@@ -450,11 +453,11 @@ GRAPHICS-WINDOW
 0
 1
 0
-34
+100
 0
-54
-0
-0
+100
+1
+1
 1
 ticks
 30.0
@@ -533,7 +536,7 @@ INPUTBOX
 1239
 166
 default_export_path_name
-../patches/Room1d_34x54.csv
+../patches/Room1d3_100x100.csv
 1
 0
 String
@@ -561,7 +564,7 @@ INPUTBOX
 1239
 105
 default_import_path_name
-../patches/Room1d_34x54.csv
+../patches/Room1d3_100x100.csv
 1
 0
 String
@@ -598,7 +601,7 @@ NIL
 U
 NIL
 NIL
-1
+0
 
 BUTTON
 1176
@@ -606,7 +609,7 @@ BUTTON
 1309
 643
 Spawn People
-spawn-turtles
+spawn-turtles\nset original-people-count count turtles
 NIL
 1
 T
@@ -657,7 +660,7 @@ INPUTBOX
 1451
 333
 ptch-size
-11
+7
 1
 0
 Number
@@ -710,7 +713,7 @@ panic-level
 panic-level
 0
 10
-10
+0
 1
 1
 NIL
@@ -725,7 +728,7 @@ pheremone-decay-prob
 pheremone-decay-prob
 0
 PROB_MAX
-0.52
+1
 PROB_MAX / 100
 1
 NIL
@@ -805,9 +808,9 @@ NIL
 MONITOR
 1315
 601
-1410
+1418
 646
-People Count
+Starting Count
 count turtles
 17
 1
@@ -819,7 +822,7 @@ BUTTON
 1309
 607
 Reset
-reset-ticks\n\nsetup-globals\n\nclear-turtles
+reset-ticks\nsetup-globals\nclear-turtles\nclear-all-plots
 NIL
 1
 T
@@ -829,6 +832,63 @@ NIL
 NIL
 NIL
 1
+
+PLOT
+1592
+20
+2019
+237
+Flow
+ticks
+People
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" "set-plot-y-range 0 int((original-people-count - count turtles) / (ticks + 1) + 1)"
+PENS
+"Flux" 1.0 0 -16777216 true "" "plot (original-people-count - count turtles) / (ticks + 1)"
+
+BUTTON
+3148
+94
+3226
+128
+useless
+NIL
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+MONITOR
+1425
+600
+1528
+645
+Starting Count
+original-people-count
+17
+1
+11
+
+MONITOR
+1536
+599
+1610
+644
+Total Flux
+(original-people-count - count turtles) / ticks
+4
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?

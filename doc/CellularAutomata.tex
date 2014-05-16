@@ -6,6 +6,7 @@
 \usepackage{alltt}%Allows the use of verbatim (good for printing out code).
 \usepackage{graphicx}%Used to import images.
 \usepackage{amsmath, amssymb, amscd, gensymb}%Contains the AMS expanded math symbols library.
+\usepackage{upgreek}
 %%For those who want smaller margins, you can use this:
 \usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
 
@@ -21,12 +22,62 @@
 
     %%Introduction-------------------------------------------------------------------------------------
     \section{Introduction}
+    The first know description of cellular automation was by Von Neumann. 
+    His goal was figure out the components required to implement a machine that could self replicate.  
+    Another well know program that uses cellular automata would be Conway's Game of Life which can result in complex patterns and can be used to simulate a simple processors. 
+    At first, it would appear that CA (cellular automation) techniques are nothing more than an oddity for academic interest. Instead the it has been proven that cellular automation is quite effective in modeling several problems. For example traffic flow on a single lane freeway \cite{nagel:freeway}  and a dual lane freeway \cite{rickert:twolane}, and crowd flows \cite{zhen:crowd-evac}, \cite{zhao:crowd-evac}, and \cite{kats:crowd-flow}. 
+    For this project I have decided to model the speed at which pedestrians can evacuate a room based on their movement parameters and the number of available exits. 
 
     %%Method------------------------------------------------------------------------------------------
     \section{Method}
+    Upon further investigation into simulating traffic flow with cellular automata. The differences between the algorithms are large enough that they have inherited a separate discussion each. First we will focus on the original CA algorithm for traffic flow which was introduced in the 1990's by Kai Nagel \cite{nagel:freeway}. Followed by an extension of that algorithm to account for multilane traffic. Afterwards we will discuss an algorithm that was used to simulate the flow of ants and pedestrians \cite{kats:crowd-flow}. 
 
-    %%Verification------------------------------------------------------------------------------------
-    \section{Verification of Program}
+    \subsection{ Freeway Traffic }
+
+    In 1992 Kai Nagel proposed a computation model that takes a single dimensional array $W$ with $L$ sites that has periodic boundaries \cite{nagel:freeway}. Each site in $W$ represents a location that may have a vehicle in it. Since the system is discrete all vehicles that belong to $W$ may only have a positive integer velocity. Updates to the system must follow a four step procedure \cite{nagel:freeway}.
+
+    \begin{enumerate}
+        \item {\bf Acceleration:} If the velocity $v$ of a vehicle is less than the speed limit $v_max$ and if the distance to the next car ahead is larger than $v + 1$ then increment the velocity by one. 
+        \item {\bf Slowing down (for other cars):} If there exists a vehicle $v_{j+n}$ in front of another vehicle $v_j$ then $v_j$ must decrease it's speed to $v = n - 1$ (the size of the gap between the two vehicles). 
+        \item {\bf Randomization:} Humans drive sporadically apply a random fluctuations to the velocity. Nagel's implementation only applies random accelerations. My algorithm was slightly modified so that random decelerations can accounted for. 
+        \item {\bf Move:} Update the vehicle positions based on their velocity. 
+    \end{enumerate}
+
+    The implementation of this algorithm can be observed in {\it TrafficFlowSingleLane-CellAut.nlogo} within the {\it \bf update} function. 
+    
+    \subsubsection{ Freeway Traffic Two-lane}
+
+    To further investigate traffic flow, M. Rickert's modification of the algorithm \cite{rickert:twolane} was implemented. The algorithm isn't much different except that has been split into two sub-steps. The new rules are:
+
+    \begin{enumerate}
+        \item Check the left and right lanes for larger gaps. If a larger gap is found jump with probability $p$ to the appropriate lane. The vehicle will only move to a different lane. Its position $l$ in $L$ will not change. Velocity changes are accounted for in step 2.  
+        \item Perform the Nagel's algorithm.
+    \end{enumerate} 
+
+    This algorithm allows vehicles to flow at higher rates than the first algorithm where vehicles are more dependent of the velocity in front of them. An implementation of this algorithm can be found in the {\bf update} function inside of {\it TrafficFlowTwoLanes-CellAut.nlogo}. 
+
+    \subsection{ Pedestrian Flow }
+    The flow of traffic is an interesting phenomenon, but it can be limited in scope since vehicle motion is bound to the rules of the road. A more interesting model is one that provides greater importance to the freedom of the particles moving in the system. Such models allow the simulation of pedestrians or other biological life forms. For this project, I decided to implement a model by Nishinari \cite{kats:crowd-flow}.  
+
+    \begin{enumerate}
+        \item The dynamic floor $D$ is modified according to its diffusion and decay rules. 
+        \item For each pedestrian, construct a set of weights $p_{ij}$ that can be used to select potential future positions. The formula is:
+        \begin{align*}
+            p_{ij} = e^{k_DD_{ij}}e^{k_SS_{ij}}P_I(i, j) * \upxi_{ij} 
+        \end{align*}
+        $D_{ij}$ represents the pheromones at each site in the world. Since this is a simulation of an evacuation then the pheromones represent the adrenaline released into the air. Other pedestrians are attracted to this. $k_D$ represents the panic factor, the higher a value of $k_D$ the more random the movements of the pedestrians become. 
+
+        $k_S$ and $S_{ij}$ represent the distance and weight to the goal site. Relative to my implementation, $k_S$ is the inverse diffused height between the source and sink on the map, while $S_{ij}$ has been set to a constant of 1 for all sites. 
+
+        $P_I$ represents the inertial of the pedestrian. It is affected by their heading. 
+        \item After constructing the weights, use them to sample the next location of the pedestrian. Move to that location. 
+        \item After moving the pedestrians. Backtrack pedestrians that have landed on the same site to their old positions. Sample a pedestrian to stay at the new location.
+        \tem 
+\end{enumerate}
+
+%%Verification------------------------------------------------------------------------------------
+\section{Verification of Program} 
+
     
     %%Data--------------------------------------------------------------------------------------------
     \section{Data}
@@ -40,8 +91,8 @@
     \section{Critique} 
 
     %%Bibliography-----------------------------------------------------------------------
-    %\begin{thebibliography}{1}
-    %    \bibitem{3}\url{http://wiki.cs.umt.edu/classes/cs477/index.php/Ice\_Column\_Temperatures}
-    %\end{thebibliography} 
+    \nocite{*}
+    \bibliography{sources}
+    \bibliographystyle{acm}
 
 \end{document}

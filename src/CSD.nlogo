@@ -438,11 +438,11 @@ end
 GRAPHICS-WINDOW
 10
 10
-727
-748
+405
+646
 -1
 -1
-7.0
+11.0
 1
 10
 1
@@ -453,9 +453,9 @@ GRAPHICS-WINDOW
 0
 1
 0
-100
+34
 0
-100
+54
 1
 1
 1
@@ -536,7 +536,7 @@ INPUTBOX
 1239
 166
 default_export_path_name
-../patches/Room1d3_100x100.csv
+../patches/CSD_Default_World.csv
 1
 0
 String
@@ -564,7 +564,7 @@ INPUTBOX
 1239
 105
 default_import_path_name
-../patches/Room1d3_100x100.csv
+../patches/CSD_Default_World.csv
 1
 0
 String
@@ -660,7 +660,7 @@ INPUTBOX
 1451
 333
 ptch-size
-7
+11
 1
 0
 Number
@@ -728,7 +728,7 @@ pheremone-decay-prob
 pheremone-decay-prob
 0
 PROB_MAX
-1
+0
 PROB_MAX / 100
 1
 NIL
@@ -773,7 +773,7 @@ SWITCH
 716
 fill-room
 fill-room
-1
+0
 1
 -1000
 
@@ -847,7 +847,7 @@ People
 10.0
 true
 false
-"" "set-plot-y-range 0 int((original-people-count - count turtles) / (ticks + 1) + 1)"
+"" ";set-plot-y-range 0 int((original-people-count - count turtles) / (ticks + 1) + 1)"
 PENS
 "Flux" 1.0 0 -16777216 true "" "plot (original-people-count - count turtles) / (ticks + 1)"
 

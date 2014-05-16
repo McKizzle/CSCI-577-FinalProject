@@ -4,7 +4,8 @@
 ; sink-distance -> the distance to the sink
 ; previous-patch-x -> the x position of the prvious patch
 ; previous-patch-y -> the y position of the prvious patch
-patches-own [boundary? sink? source? sink-distance previous-patch previous-patch-x previous-patch-y]
+patches-own [boundary? sink? source? sink-distance pheremone-level]
+turtles-own [previous-patch target-patch previous-patch-x previous-patch-y]
 
 ; boundary-pcolor -> the default bounday color
 ; sink-color      -> the default sink color
@@ -13,6 +14,8 @@ patches-own [boundary? sink? source? sink-distance previous-patch previous-patch
 ; boundary-elvation -> the default boundary elevation
 ; PROB_MAX -> a probability constant. 
 globals [boundary-pcolor sink-pcolor source-pcolor path-pcolor PROB_MAX]
+
+extensions [table] ; essentially a dictionary. 
 
 to square-room
   setup-patches
@@ -27,6 +30,25 @@ to square-room
      [
        enable-boundary
      ]
+     
+    if (pxcor = int(max-pxcor / 2)) and (pycor = 0)
+    [
+      disable-boundary
+      enable-sink 
+    ]
+    
+    if(pxcor = 1 and pycor = max-pycor - 1)
+    [
+      disable-boundary
+      enable-source 
+    ]
+    
+    if(pxcor = max-pxcor - 1 and pycor = max-pycor - 1)
+    [
+      disable-boundary
+      enable-source 
+    ]
+    
   ]
   
   ask patches [ paint-paths set-distances ]
@@ -49,7 +71,6 @@ to setup-globals
   set boundary-elevation 1000
   set PROB_MAX 1
   setup-colors
-  ;ask patches [ paint-paths set-distances] ; let the user manually repaint teh path eleveations. 
   ask turtles [ die ] ; Kill all turtles if any
 end
 
@@ -128,9 +149,13 @@ to white-as-path
 end
 
 to paint-paths
+  ;boundary-pcolor sink-pcolor source-pcolor path-pcolor
   if (boundary? = False) and (sink? = False) and (source? = False) [
-    set pcolor red
+    set pcolor path-pcolor
   ]
+  if boundary? [ set pcolor boundary-pcolor ]
+  if sink? [ set pcolor sink-pcolor ]
+  if source? [ set pcolor source-pcolor ]
 end
 
 ;-------------------- SINK
@@ -231,15 +256,19 @@ end
 
 to spawn-turtles
   set-default-shape turtles "person"
+  
+  ; count the number of placeable patches. 
+  let mx-pssble count patches with [not boundary?]
+  let mx-ppl int mx-pssble * fill-percent
+  
   let num-spawned 0
   ask patches [
-    if (num-spawned < people-count) or fill-room [
+    if (num-spawned < mx-ppl) or fill-room [
       if boundary? = False [
         sprout 1
         set num-spawned num-spawned + 1
       ]
     ]
-    
   ]
 end
    
@@ -275,15 +304,35 @@ to diffuse-pcolor
   ]
 end
 
+to diffuse-pheremones
+  let ngbrs neighbors4
+  let wghts []
+  if (boundary? = False) and (sink? = False) and (source? = False) [ 
+    ask ngbrs [
+      if boundary? = False [
+        set wghts fput pheremone-level wghts
+      ] 
+    ]
+    set pheremone-level mean wghts
+  ]
+end
+
 ;;--------------------------------------- SIMULATION FUNCTIONS ---------------------------------------------------;;
 ;;--------------------------------------- SIMULATION FUNCTIONS ---------------------------------------------------;;
 ;;--------------------------------------- SIMULATION FUNCTIONS ---------------------------------------------------;;
 
 ;; Update and turtle motions
 to update
-;  ask turtles [ set previous-patch ]
-;  ask turtles [ move-turtle ]
-  ask turtles [
+  ask turtles [ if (sink? = True) [ die ] ]
+  ask turtles [ set previous-patch patch-here]
+  ask patches [ 
+    diffuse-pheremones ; apply the default pheremone diffusion rate. 
+    apply-pheremones ; set phereome level to one if there is a person 
+    decay-pheremones  
+  ] 
+  ask turtles [ if (sink? = True) [ die ] ]
+  ask turtles [ move-turtle ]
+  ask turtles [ ; This part here is part of the topology mentioned that forces movement towards the doors. aka the K_s value. 
     set previous-patch patch-here ; stor
     let xcor_0 xcor
     let ycor_0 ycor
@@ -292,25 +341,105 @@ to update
       set xcor xcor_0
       set ycor ycor_0
     ]
-    if (sink? = True) [die]
+  ]
+  ask turtles [ if (sink? = True) [ die ] ]
+end
+
+to apply-pheremones
+  let person one-of turtles-on patch-at 0 0
+  
+  if person != nobody [ set pheremone-level 1 ]
+end
+
+to decay-pheremones
+  let r random-float PROB_MAX
+  
+  if r < pheremone-decay-prob
+  [
+    if pheremone-level > 0 [ set pheremone-level pheremone-level - 0.25 ]
   ]
 end
 
 ; Implement the motion algorithm as described in 
 ; Modelling of self-driven particles: Foraging ants and pedestrians -- Katsuhiro Nishinari,  Ken Sugawara, Toshiya Kazama, Andreas Schadschneider, Debashish Chowdhury
 to move-turtle
-  ; 
+  let target nobody
+  ; loop through the neighbor patches for each turtle. 
+  let ngbrs neighbors
+  ;print ngbrs
+  let mxm_prb 0
+  let crn_prb 0
+  if (boundary? = False) and (sink? = False) and (source? = False) [ 
+    ; first loop to calculate the sum of the weights
+    ask ngbrs [
+      if (boundary? = False) and (not sink?) [
+        let xphi 1
+        let person one-of turtles-on patch-at 0 0
+        if person != nobody [ set xphi 0 ] ; cell cannot be accessed. force probability to zero. 
+        
+        let D_ij pheremone-level ; set D_ij to the pheremone level of the patch
+        
+        let A exp(D_ij * panic-level) ; D_ij * k_D (k_D := panic level)
+        let B exp( 1 / sink-distance) ; inversly proportial to the distance. k_S is set to one for this problem
+        
+        let P_ij A * B * xphi
+        
+        set mxm_prb mxm_prb + P_ij
+      ]
+    ]
+    ; next loop randomly choose a patch to jump to . 
+    let r random-float mxm_prb
+    ask ngbrs [
+      if (boundary? = False) [
+        let xphi 1
+        let person one-of turtles-on patch-at 0 0
+        if person != nobody [ set xphi 0 ] ; cell cannot be accessed. force probability to zero. 
+        
+        let D_ij pheremone-level ; set D_ij to the pheremone level of the patch
+        
+        let A exp(D_ij * panic-level) ; D_ij * k_D (k_D := panic level)
+        let B exp(12 / sink-distance) ; inversly proportial to the distance. k_S is set to one for this problem
+        
+        let P_ij A * B * xphi
+        
+        ; found the patch to move to. 
+        if ( r > crn_prb ) and ( r < crn_prb + P_ij ) [
+          set target patch-at 0 0
+        ]
+        
+        set crn_prb crn_prb + P_ij
+      ]
+    ]
+    
+    set target-patch target
+    
+    ; move person to target patch if appropriate. 
+    if target-patch != nobody 
+    [
+      face target-patch
+      move-to target-patch
+    ]
+  ]
 end
+
+
+
+
+
+
+
+
+
   
 @#$#@#$#@
 GRAPHICS-WINDOW
 10
 10
-727
-748
+405
+646
 -1
 -1
-7.0
+11.0
 1
 10
 1
@@ -321,9 +450,9 @@ GRAPHICS-WINDOW
 0
 1
 0
-100
+34
 0
-100
+54
 0
 0
 1
@@ -404,7 +533,7 @@ INPUTBOX
 1239
 166
 default_export_path_name
-../patches/Room_100x100.csv
+../patches/Room1d_34x54.csv
 1
 0
 String
@@ -432,7 +561,7 @@ INPUTBOX
 1239
 105
 default_import_path_name
-../patches/Room_100x100.csv
+../patches/Room1d_34x54.csv
 1
 0
 String
@@ -472,10 +601,10 @@ NIL
 1
 
 BUTTON
-1137
-564
-1270
-597
+1176
+610
+1309
+643
 Spawn People
 spawn-turtles
 NIL
@@ -528,7 +657,7 @@ INPUTBOX
 1451
 333
 ptch-size
-7
+11
 1
 0
 Number
@@ -580,8 +709,8 @@ SLIDER
 panic-level
 panic-level
 0
-source-elevation * 2
-20
+10
+10
 1
 1
 NIL
@@ -592,11 +721,11 @@ SLIDER
 726
 1161
 759
-pheremone-decay-rate
-pheremone-decay-rate
+pheremone-decay-prob
+pheremone-decay-prob
 0
 PROB_MAX
-1
+0.52
 PROB_MAX / 100
 1
 NIL
@@ -620,25 +749,25 @@ NIL
 1
 
 SLIDER
-1137
-599
-1459
-632
-people-count
-people-count
-1
-100
-100
-1
+1176
+648
+1498
+681
+fill-percent
+fill-percent
+0.0
+PROB_MAX
+0.4
+PROB_MAX / 100
 1
 NIL
 HORIZONTAL
 
 SWITCH
-1137
-634
-1460
-667
+1176
+683
+1499
+716
 fill-room
 fill-room
 1
@@ -664,6 +793,34 @@ BUTTON
 2. Add Sink
 add-sink
 T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+MONITOR
+1315
+601
+1410
+646
+People Count
+count turtles
+17
+1
+11
+
+BUTTON
+1175
+546
+1309
+607
+Reset
+reset-ticks\n\nsetup-globals\n\nclear-turtles
+NIL
 1
 T
 OBSERVER

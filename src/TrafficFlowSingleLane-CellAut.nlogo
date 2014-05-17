@@ -204,7 +204,7 @@ BUTTON
 75
 338
 Run
-update
+update\n\nif ticks = 1000 [ stop ]\n
 T
 1
 T
@@ -224,7 +224,7 @@ number-of-cars
 number-of-cars
 1
 100
-17
+31
 1
 1
 NIL
@@ -263,7 +263,7 @@ SWITCH
 158
 uniform-speed
 uniform-speed
-0
+1
 1
 -1000
 
@@ -285,18 +285,18 @@ HORIZONTAL
 PLOT
 300
 223
-937
+849
 492
 Car Speeds
 time
 velocity (units / tick)
 0.0
-100.0
+1000.0
 0.0
 7.0
+false
 true
-true
-"" "set-plot-x-range (ticks - 100) ticks"
+"" ";set-plot-x-range (ticks - 100) ticks"
 PENS
 "Min Speed" 1.0 0 -13791810 true "" "plot min [ speed ] of turtles"
 "Max Speed" 1.0 0 -2674135 true "" "plot max [ speed ] of turtles"
@@ -329,7 +329,7 @@ braking-probability
 braking-probability
 0
 MAX_PROB
-0.1
+0
 MAX_PROB / 100
 1
 NIL
@@ -344,7 +344,7 @@ acceleration-probability
 acceleration-probability
 0
 MAX_PROB
-0.2
+0
 MAX_PROB / 100
 1
 NIL

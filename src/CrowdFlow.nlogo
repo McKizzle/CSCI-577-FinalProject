@@ -536,7 +536,7 @@ INPUTBOX
 1239
 166
 default_export_path_name
-../patches/CSD_Default_World.csv
+../patches/Room4d_34x54.csv
 1
 0
 String
@@ -564,7 +564,7 @@ INPUTBOX
 1239
 105
 default_import_path_name
-../patches/CSD_Default_World.csv
+../patches/Room4d_34x54.csv
 1
 0
 String
@@ -592,7 +592,7 @@ BUTTON
 888
 679
 Update
-update
+update\n\nif count turtles = 0 [stop]\n\n;if ticks = 500 [stop]
 T
 1
 T
@@ -713,7 +713,7 @@ panic-level
 panic-level
 0
 10
-2
+10
 1
 1
 NIL
@@ -728,7 +728,7 @@ pheremone-decay-prob
 pheremone-decay-prob
 0
 PROB_MAX
-0
+0.5
 PROB_MAX / 100
 1
 NIL
@@ -760,7 +760,7 @@ fill-percent
 fill-percent
 0.0
 PROB_MAX
-0.4
+0.5
 PROB_MAX / 100
 1
 NIL
@@ -836,21 +836,21 @@ NIL
 PLOT
 1592
 20
-2019
+2134
 237
-Flow
+Flux and Density Comparison
 ticks
 People
 0.0
-10.0
+0.0
 0.0
 10.0
-true
 false
-"" ";set-plot-y-range 0 int((original-people-count - count turtles) / (ticks + 1) + 1)"
+true
+"" ";set-plot-y-range 0 int((original-people-count - count turtles) / (ticks + 1) + 1)\nset-plot-x-range 0 ticks + 1"
 PENS
-"Flux" 1.0 0 -16777216 true "" "plot (original-people-count - count turtles) / (ticks + 1)"
-"Density" 1.0 0 -13791810 true "" "plot (count turtles) / (count patches with [not boundary?])"
+"Flux (people / tick )" 1.0 0 -14439633 true "" "plot (original-people-count - count turtles) / (ticks + 1)"
+"Density ( people / patch)" 1.0 0 -2674135 true "" "plot (count turtles) / (count patches with [not boundary?])"
 
 BUTTON
 3148
@@ -911,10 +911,10 @@ Density
 ticks
 density ( people / unit )
 0.0
-10.0
+1000.0
 0.0
 1.25
-true
+false
 false
 "" ""
 PENS

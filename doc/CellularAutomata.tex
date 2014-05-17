@@ -67,28 +67,147 @@
         \end{align*}
         $D_{ij}$ represents the pheromones at each site in the world. Since this is a simulation of an evacuation then the pheromones represent the adrenaline released into the air. Other pedestrians are attracted to this. $k_D$ represents the panic factor, the higher a value of $k_D$ the more random the movements of the pedestrians become. 
 
-        $k_S$ and $S_{ij}$ represent the distance and weight to the goal site. Relative to my implementation, $k_S$ is the inverse diffused height between the source and sink on the map, while $S_{ij}$ has been set to a constant of 1 for all sites. 
+        $k_S$ and $S_{ij}$ represent the distance and weight to the goal site. Relative to my implementation, $k_S$ is the inverse diffused height between the source and sink on the map, while $S_{ij}$ has been set to a constant of one for all sites. 
 
-        $P_I$ represents the inertial of the pedestrian. It is affected by their heading. 
+        $P_I$ represents the inertial of the pedestrian. It is affected by their heading. Given the scope of this project $P_I$ is a constant. 
         \item After constructing the weights, use them to sample the next location of the pedestrian. Move to that location. 
         \item After moving the pedestrians. Backtrack pedestrians that have landed on the same site to their old positions. Sample a pedestrian to stay at the new location.
-        \tem 
 \end{enumerate}
 
-%%Verification------------------------------------------------------------------------------------
-\section{Verification of Program} 
+    %%Verification------------------------------------------------------------------------------------
+    \section{Verification of Program}      
+    The algorithms where implemented using NetLogo an agent based programming language. The NetLogo application is designed such that the programmer can construct prototypes quickly by allow the creation of an interface, integration of documentation as markdown, and an area to write code for more advanced logic.
 
+    There are three NetLogo applications. {\it TrafficFlowSingleLane-CellAut.nlogo, TrafficFlowTwoLanes-CellAuto.nlogo} and {\it CrowdFlow.nlogo}. The first file contains the necessary components to implement the single lane lane algorithm. The second file contains the traffic simulation with agents that can change lanes based on the gap size ahead. 
     
+    The third file (and the most complex) implements the pedestrian flow algorithms, allows you to setup your own scenarios, save and export them. 
+
+    Descriptions on how to use the programs are detailed in the {\it info} section of the nlogo files. 
+
+
     %%Data--------------------------------------------------------------------------------------------
     \section{Data}
+    \subsection{ Traffic Simulations }
+    $p_b$, $p_a$, and $p_l$ represent the breaking probability, acceleration probability, and lane change probability respectively.
+    
+    \begin{figure}[ht!]
+        \centering
+        \includegraphics[width=3in]{../img/VelocitiesSingleLane.png}
+        \caption{Single lane simulation: 31 cars with initial uniform placement and velocity of zero. $p_b = 0.10$, $p_a = 0.20$, and $v_{max} = 6$}
+        \label{vsl:31:0d1:0d2}
+    \end{figure}
+    
+    \begin{figure}[ht!]
+        \centering
+        \includegraphics[width=3in]{../img/VelDistroSingleLane.png}
+        \caption{Single lane simulation: Distribution with same parameters as Figure \ref{vsl:31:0d1:0d2}}
+        \label{vsl:d31:0d1:0d2}
+    \end{figure}
+
+    Disabling the random acceleration behaviors results in a more unrealistic and predictable system. 
+
+    \begin{figure}[ht!]
+        \centering
+        \includegraphics[width=3in]{../img/VelocitiesSingleLane_pb0pa0.png}
+        \caption{Same initial conditions as Figure \ref{vsl:31:0d1:0d2} except $p_b = 0$ and $p_a = 0$.}
+        \label{vsl:31:0d0:0d0}
+    \end{figure}
+ 
+    \begin{figure}[ht!]
+        \centering
+        \includegraphics[width=3in]{../img/VelDistroSingleLane_pb0pa0.png}
+        \caption{Speed distributions for Figure \ref{vsl:31:0d0:0d0}}
+        \label{vsl:d31:0d0:0d0}
+    \end{figure}
+
+    \begin{figure}[ht!]
+        \centering
+        \includegraphics[width=3in]{../img/VelocitiesTwoLane.png}
+        \caption{Dual lane simulation: 30 cars with initial uniform placement and velocity of zero. $p_b = 0.10$, $p_a = 0.20$, $p_l = 0.30$, and $v_{max} = 6$}
+        \label{vtl:31:0d1:0d2}
+    \end{figure}
+    
+    \begin{figure}[ht!]
+        \centering
+        \includegraphics[width=3in]{../img/VelDistroTwoLane.png}
+        \caption{Dual lane simulation: Distribution with same parameters as Figure \ref{vtl:31:0d1:0d2}}
+        \label{vtl:d31:0d1:0d2}
+    \end{figure}
+
+    After disabling the random fluctuations for the dual lane traffic simulation. 
+
+    \begin{figure}[ht!]
+        \centering
+        \includegraphics[width=3in]{../img/VelocitiesTwoLane_pb0pa0.png}
+        \caption{Dual lane simulation: Distribution with initial conditions as Figure \ref{vtl:31:0d1:0d2}, except $p_b = 0$ and $p_a = 0$}
+        \label{vtl:31:0d0:0d0}
+    \end{figure}
+
+    \begin{figure}[ht!]
+        \centering
+        \includegraphics[width=3in]{../img/VelDistroTwoLane_pb0pa0.png}
+        \caption{Velocity distribution from Figure \ref{vtl:31:0d0:0d0}}
+        \label{vtl:d31:0d0:0d0}
+    \end{figure}
+
+    \subsection{ Crowd Flow }
+    Results from the crowd flow simulations. Since the crowd flow algorithm wasn't working properly the plots produced are not an accurate representation of how the algorithm should behave. All of the plots represent the flux (the average number of people who left per tick) and the population density of the room. In this case the room chosen has a width of 34 and height of 54 units. Figures 9 through 15 visualize the flux and change of density over time as a function of the crowd panic and the starting density of the room. The panic level and pheromone decay probability are denoted as $p_l$ and $p_d$. All doors are assumed to have size of one such that only a single person can pass through the doorway. 
+
+    \begin{figure}[ht!]
+        \centering
+        \includegraphics[width=3in]{../img/Crowd34x541d_pl0pd0d5.png}
+        \caption{ Observation of flux and density change given a starting room population of 875 out of a maximum capacity of 1750 with $p_l = 0$ and $p_d = 0.5$. Given the room has a single door.}
+        \label{crd:d1:pl0:pd0d5}
+    \end{figure}
+
+    \begin{figure}[ht!]
+        \centering
+        \includegraphics[width=3in]{../img/Crowd34x541d_pl10pd0d5.png}
+        \caption{ Same conditions as Figure \ref{crd:d1:pl0:pd0d5} except $p_l = 10$.}
+        \label{crd:d1:pl0:pd0d5}
+    \end{figure}
+
+    \begin{figure}[ht!]
+        \centering
+        \includegraphics[width=3in]{../img/Crowd34x542d_pl0pd0d5.png}
+        \caption{The flux and density change of a room that has two doors. The starting population is 875 out of a maximum capacity of 1750 with $p_l = 0$ and $p_d = 0.5$}
+        \label{crd:d2:pl0:pd0d5}
+    \end{figure}
+
+    \begin{figure}[ht!]
+        \centering
+        \includegraphics[width=3in]{../img/Crowd34x542d_pl10pd0d5.png}
+        \caption{Same initial settings as Figure \ref{crd:d2:pl0:pd05} except $p_l = 10$}
+        \label{crd:d2:pl10:pd0d5}
+    \end{figure}
+
+    \begin{figure}[ht!]
+        \centering
+        \includegraphics[width=3in]{../img/Crowd34x544d_pl0pd0d5.png}
+        \caption{ Observation of flux and density change given a starting room population of 875 out of a maximum capacity of 1750 with $p_l = 0$ and $p_d = 0.5$}
+        \label{crd:d4:pl0:pd0d5}
+    \end{figure}
+
+    \begin{figure}[ht!]
+        \centering
+        \includegraphics[width=3in]{../img/Crowd34x544d_pl10pd0d5.png}
+        \caption{Same as Figure \ref{crd:d4:pl0:pd0d5} except $p_l = 10$}
+        \label{crd:d4:pl10:pd0d5}
+    \end{figure}
+    
     %%Analysis---------------------------------------------------------------------------
-    \section{Analysis}
+    \section{ Analysis }
+
+    When the random fluctuations in speed are removed from the vehicles ($p_b = p_a = 0$). Then the average velocity appears to increase dramatically. Increasing the fluctuation rate a causes the average velocity to decrease for the vehicles. By adding an extra lane the vehicles are able to compensate for the fluctuation and keep a higher average velocity. 
+
+    Even though the crowd simulation algorithm didn't work properly. Some interesting properties became visible. When the randomness of the crowd motion increased so did the flux, but if the randomness of the crowd motion decreased the flux value also decreased.    
 
     %%Interpretation---------------------------------------------------------------------
-    \section{Interpretation}
+    \section{ Interpretation }
 
-    %%Critique---------------------------------------------------------------------------
-    \section{Critique} 
+    The implementation of the traffic simulation worked quite well and it turned out easier then I originally expected. It would be interesting to implement more complex road structures and observe how the motions of the vehicles differ when there are multiple intersections. 
+
+    Besides the traffic simulations, further investigation of the crowd flow algorithm would be needed in order to figure out the strange behavior of the panic level. Instead of increasing the random motion of the people instead it decreases it. 
 
     %%Bibliography-----------------------------------------------------------------------
     \nocite{*}

@@ -133,7 +133,6 @@ end
 ; move the car to another lane (randomly)
 to move-sideways
   ; Based on the gaps of the left and right lane randomly determine which one to switch to.
-  let r random-float MAX_PROB; generate a random value. 
   
   ; Switch to the lane with the larger gap. 
   
@@ -313,7 +312,7 @@ number-of-vehicles
 number-of-vehicles
 1
 100
-64
+30
 1
 1
 NIL
@@ -341,7 +340,7 @@ SWITCH
 144
 uniform-placement
 uniform-placement
-1
+0
 1
 -1000
 
@@ -352,7 +351,7 @@ SWITCH
 180
 uniform-velocity
 uniform-velocity
-1
+0
 1
 -1000
 
@@ -392,7 +391,7 @@ BUTTON
 78
 389
 Update
-update
+update\n\nif ticks = 1000 [stop]
 T
 1
 T
@@ -412,7 +411,7 @@ braking-probability
 braking-probability
 0
 MAX_PROB
-0.1
+0
 MAX_PROB / 100
 1
 NIL
@@ -427,7 +426,7 @@ acceleration-probability
 acceleration-probability
 0
 MAX_PROB
-0.2
+0
 MAX_PROB / 100
 1
 NIL
@@ -436,24 +435,22 @@ HORIZONTAL
 PLOT
 572
 106
-1017
+1138
 378
 Car Speeds
-Speed ( units / tick )
 Ticks
+Speed ( units / tick )
 0.0
-10.0
+1000.0
 0.0
 7.0
+false
 true
-true
-"" "set-plot-x-range (ticks - 100) ticks"
+"" ";set-plot-x-range (ticks - 100) ticks"
 PENS
 "Max Velocity" 1.0 0 -2674135 true "" "plot max [velocity] of vehicles"
 "Min Velocity" 1.0 0 -13791810 true "" "plot min [velocity] of vehicles"
-"Sample Velocity" 1.0 0 -16710653 true "" ";plot [velocity] of sample-vehicle"
 "Average Velocity" 1.0 0 -11085214 true "" "plot mean [velocity] of vehicles"
-"Median  Velocity" 1.0 0 -817084 true "" ";plot median [velocity] of vehicles"
 
 PLOT
 571
@@ -474,10 +471,10 @@ PENS
 "default" 1.0 0 -13345367 true "" "histogram speeds"
 
 MONITOR
-1023
-106
-1135
-151
+801
+686
+913
+731
 Vehicle Density
 number-of-vehicles / (count patches with [drivable? = true])
 4
@@ -559,39 +556,41 @@ lane-switching
 @#$#@#$#@
 ## WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
+Implementation of M. Rickert's modification of Nagel, K.
 
 ## HOW IT WORKS
 
-(what rules the agents use to create the overall behavior of the model)
+At each iteration apply the following procedure to each agent in the system. 
+  
+  - Substep 1
+      - Two-lane traffic flow. Takes the previous algorithm and adds an additional sub step. 
+    1. Check neighboring lanes for larger gaps. If a larger gap exists then with a probability $p$ switch to that lane. The motion will only be lateral, the velocity doesn't affect the vehicle until the next step.
+
+  - Substep 2
+    - __Acceleration:__ If the velocity $v$ of a vehicle is less than the speed limit $v_max$ and if the distance to the next car ahead is larger than $v + 1$ then increment the velocity by one. 
+    - __Slowing down (for other cars):__ If there exists a vehicle $v_{j+n}$ in front of another vehicle $v_j$ then $v_j$ must decrease it's speed to $v = n - 1$ (the size of the gap between the two vehicles). 
+    - __Randomization:__ Humans drive sporadically apply a random fluctuations to the velocity. Nagel's implementation only applies random accelerations. My algorithm was slightly modified so that random decelerations can accounted for. 
+    - __Move:__ Update the vehicle positions based on their velocity.
 
 ## HOW TO USE IT
 
-(how to use the model, including a description of each of the items in the Interface tab)
+  1. Adjust the slider to set the number of vehicles (agents) to place in the world. 
+  2. Determine whether or not to place the cars randomly with either random or a set initial velocity.
+  3. Click the _Run_ to start the simulation.
+  4. Adjust the sliders to modify how the cars behave.
+    1. _braking-probability_ sets the probability that an vehicle will apply the brakes from undercompensating the distance of the vehicle ahead. 
+    2. _acceleration-probability_ sets the probability that the vehicle will accelerate to catch up with the vehicle ahead. 
+    3. _lane-change-probability_ how hesitant a driver is to change a lane. 
+    4. Change the speed-limit if the vehicles are moving too quickly. 
+  5. Allow vehicles to change lanes. 
 
 ## THINGS TO NOTICE
 
-(suggested things for the user to notice while running the model)
-
-## THINGS TO TRY
-
-(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
-
-## EXTENDING THE MODEL
-
-(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
-
-## NETLOGO FEATURES
-
-(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
-
-## RELATED MODELS
-
-(models in the NetLogo Models Library and elsewhere which are of related interest)
+Enable lane switching to observe an increase in the vehicle velocities. 
 
 ## CREDITS AND REFERENCES
 
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
+M. RICKERT , K. NAGEL , M., AND A.L ATOUR . Two lane traffic simulations using cellular automata. _Physica A (1995)_.
 @#$#@#$#@
 default
 true

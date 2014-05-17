@@ -245,21 +245,6 @@ speed-limit
 NIL
 HORIZONTAL
 
-SLIDER
-80
-257
-293
-290
-fluctuation-probability
-fluctuation-probability
-0
-MAX_PROB
-0.1
-MAX_PROB / 100
-1
-NIL
-HORIZONTAL
-
 SWITCH
 96
 125
@@ -304,7 +289,7 @@ PLOT
 492
 Car Speeds
 time
-speed (units / tick)
+velocity (units / tick)
 0.0
 100.0
 0.0
@@ -322,7 +307,7 @@ PLOT
 224
 1374
 490
-Car Speed Distribution
+Car Velocity Distribution
 Speed ( units / tick )
 Count
 0.0
@@ -337,9 +322,9 @@ PENS
 
 SLIDER
 80
-295
+260
 294
-328
+293
 braking-probability
 braking-probability
 0
@@ -352,9 +337,9 @@ HORIZONTAL
 
 SLIDER
 80
-334
+299
 293
-367
+332
 acceleration-probability
 acceleration-probability
 0
@@ -379,27 +364,38 @@ number-of-cars / (count patches with [pcolor = gray])
 @#$#@#$#@
 ## WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
+Implements Nagel, K. cellular automata traffic algorithm.
 
 ## HOW IT WORKS
 
-(what rules the agents use to create the overall behavior of the model)
+At each iteration apply the following procedure to each agent in the system. 
+
+  - __Acceleration:__ If the velocity $v$ of a vehicle is less than the speed limit $v_max$ and if the distance to the next car ahead is larger than $v + 1$ then increment the velocity by one. 
+  - __Slowing down (for other cars):__ If there exists a vehicle $v_{j+n}$ in front of another vehicle $v_j$ then $v_j$ must decrease it's speed to $v = n - 1$ (the size of the gap between the two vehicles). 
+  - __Randomization:__ Humans drive sporadically apply a random fluctuations to the velocity. Nagel's implementation only applies random accelerations. My algorithm was slightly modified so that random decelerations can accounted for. 
+  - __Move:__ Update the vehicle positions based on their velocity.
 
 ## HOW TO USE IT
 
-(how to use the model, including a description of each of the items in the Interface tab)
+  1. Adjust the slider to set the number of vehicles (agents) to place in the world. 
+  2. Determine whether or not to place the cars randomly with either random or a set initial velocity.
+  3. Click the _Run_ to start the simulation.
+  4. Adjust the sliders to modify how the cars behave.
+    1. _braking-probability_ sets the probability that an vehicle will apply the brakes from undercompensating the distance of the vehicle ahead. 
+    2. _acceleration-probability_ sets the probability that the vehicle will accelerate to catch up with the vehicle ahead. 
+    3. Change the speed-limit if the vehicles are moving too quickly. 
 
 ## THINGS TO NOTICE
 
-(suggested things for the user to notice while running the model)
+Observe the wave front as it propagates backwards. 
 
 ## THINGS TO TRY
 
-(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
+Play around with the braking and accerlation probabilities. 
 
 ## EXTENDING THE MODEL
 
-(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+If you are interested check out the _TrafficFlowTwoLanes-CellAut.nlogo_ file. Which contains the extended version of the algorithm that allows lane changing. 
 
 ## NETLOGO FEATURES
 
@@ -407,11 +403,12 @@ number-of-cars / (count patches with [pcolor = gray])
 
 ## RELATED MODELS
 
-(models in the NetLogo Models Library and elsewhere which are of related interest)
+M.R ICKERT , K.N AGEL , M., AND A.L ATOUR . Two
+lane traffic simulations using cellular automata. _Physica A (1995)_.
 
 ## CREDITS AND REFERENCES
 
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
+N AGEL , K., AND S CHRECKENBERG , M. A cellular automaton model for freeway traffic. _J. Phys. I France_
 @#$#@#$#@
 default
 true
